@@ -653,13 +653,13 @@ def decode_struct(name: str, data: bytes) -> Any:
 
 
 def frame(payload: bytes) -> bytes:
-    return struct.pack("<I", len(payload)) + payload
+    return struct.pack(">I", len(payload)) + payload
 
 
 def read_frame(r: Any) -> bytes:
-    """Reads exactly one framed payload from a file-like object (`read` returns bytes).""" 
+    """Reads exactly one framed payload from a file-like object (`read` returns bytes)."""
     hdr = _read_exact(r, 4)
-    (n,) = struct.unpack("<I", hdr)
+    (n,) = struct.unpack(">I", hdr)
     return _read_exact(r, n)
 
 
