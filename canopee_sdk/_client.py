@@ -172,24 +172,21 @@ class Client:
 
     def put(self, data: bytes, name: Optional[str] = None) -> ObjectId:
         command = {"Put": {"data": list(data), "name": name}}
-        (id_,) = self._transact(command)
-        return id_
+        return self._transact(command)["id"]
 
     def put_object(self, data: bytes, object_type: str, name: Optional[str] = None) -> ObjectId:
         command = {"PutObject": {"data": list(data), "object_type": object_type, "name": name}}
-        (id_,) = self._transact(command)
-        return id_
+        return self._transact(command)["id"]
 
     def concat(self, ids: list[ObjectId], name: Optional[str] = None) -> ObjectId:
-        (id_,) = self._transact({"Concat": {"ids": ids, "name": name}})
-        return id_
+        return self._transact({"Concat": {"ids": ids, "name": name}})["id"]
 
     def get(self, id_: ObjectId) -> StoredObject:
-        obj = self._transact({"Get": {"id": id_}})
+        obj = self._transact({"Get": {"id": id_}})["object"]
         return from_shape(StoredObject, obj)
 
     def list(self) -> list[ObjectInfo]:
-        objs = self._transact({"List": {}})
+        objs = self._transact({"List": {}})["objects"]
         return [from_shape(ObjectInfo, o) for o in objs]
 
     def delete_object(self, id_: ObjectId) -> None:
@@ -199,7 +196,7 @@ class Client:
         return self._transact({"SetName": {"id": id_, "name": name}})
 
     def export_object(self, id_: ObjectId) -> ExportBundle:
-        bundle = self._transact({"Export": {"id": id_}})
+        bundle = self._transact({"Export": {"id": id_}})["bundle"]
         return from_shape(ExportBundle, bundle)
 
     def import_object(self, bundle: ExportBundle) -> None:
@@ -214,50 +211,47 @@ class Client:
         return from_shape(NodeStatus, st)
 
     def identity(self) -> str:
-        (id_,) = self._transact({"Identity": {}})
-        return id_
+        return self._transact({"Identity": {}})["identity_id"]
 
     def shutdown(self) -> None:
         return self._transact({"Shutdown": {}})
 
     def dh_public_key(self) -> bytes:
-        (key,) = self._transact({"DhPublicKey": {}})
+        key = self._transact({"DhPublicKey": {}})["key"]
         return bytes(int(x) for x in key)
 
     def save_profile(self, profile: Profile) -> ObjectId:
-        (id_,) = self._transact({"SaveProfile": {"profile": to_shape(profile)}})
-        return id_
+        return self._transact({"SaveProfile": {"profile": to_shape(profile)}})["id"]
 
     def load_profile(self) -> Optional[Profile]:
-        profile = self._transact({"LoadProfile": {}})
+        profile = self._transact({"LoadProfile": {}})["profile"]
         return None if profile is None else from_shape(Profile, profile)
 
     def save_contact_list(self, lst: ContactList) -> ObjectId:
-        (id_,) = self._transact({"SaveContactList": {"list": to_shape(lst)}})
-        return id_
+        return self._transact({"SaveContactList": {"list": to_shape(lst)}})["id"]
 
     def load_contact_list(self) -> Optional[ContactList]:
-        lst = self._transact({"LoadContactList": {}})
+        lst = self._transact({"LoadContactList": {}})["list"]
         return None if lst is None else from_shape(ContactList, lst)
 
     def save_home_index(self, index: HomeIndex) -> ObjectId:
-        (id_,) = self._transact({"SaveHomeIndex": {"index": to_shape(index)}})
-        return id_
+        return self._transact({"SaveHomeIndex": {"index": to_shape(index)}})["id"]
 
     def load_home_index(self) -> Optional[HomeIndex]:
-        index = self._transact({"LoadHomeIndex": {}})
+        index = self._transact({"LoadHomeIndex": {}})["index"]
         return None if index is None else from_shape(HomeIndex, index)
 
     def set_home_entry_shared(self, name: str, shared: bool) -> None:
         return self._transact({"SetHomeEntryShared": {"name": name, "shared": shared}})
 
     def export_identity(self, passphrase: str) -> bytes:
-        (blob,) = self._transact({"ExportIdentity": {"passphrase": passphrase}})
+        blob = self._transact({"ExportIdentity": {"passphrase": passphrase}})["bytes"]
         return bytes(int(x) for x in blob)
 
     def import_identity(self, blob: bytes, passphrase: str, overwrite: bool = False) -> str:
-        (id_,) = self._transact({"ImportIdentity": {"bytes": list(blob), "passphrase": passphrase, "overwrite": overwrite}})
-        return id_
+        return self._transact(
+            {"ImportIdentity": {"bytes": list(blob), "passphrase": passphrase, "overwrite": overwrite}}
+        )["identity_id"]
 
     # ------------------------------------------------------------------
     # Network / user records
@@ -270,26 +264,24 @@ class Client:
         return self._transact({"PublishAppPointer": {"name": name, "manifest": manifest}})
 
     def resolve_app_pointer(self, owner: str, name: str) -> Optional[AppPointerRecord]:
-        record = self._transact({"ResolveAppPointer": {"owner": owner, "name": name}})
+        record = self._transact({"ResolveAppPointer": {"owner": owner, "name": name}})["record"]
         return None if record is None else from_shape(AppPointerRecord, record)
 
     def resolve_pointer(self, owner: str, name: str) -> Optional[AppPointerRecord]:
-        record = self._transact({"ResolvePointer": {"owner": owner, "name": name}})
+        record = self._transact({"ResolvePointer": {"owner": owner, "name": name}})["record"]
         return None if record is None else from_shape(AppPointerRecord, record)
 
     def claim_username(self, username: str) -> None:
         return self._transact({"ClaimUsername": {"username": username}})
 
     def resolve_username(self, username: str) -> str:
-        (owner,) = self._transact({"ResolveUsername": {"username": username}})
-        return owner
+        return self._transact({"ResolveUsername": {"username": username}})["owner"]
 
     def show_username(self) -> Optional[str]:
-        (username,) = self._transact({"ShowUsername": {}})
-        return username
+        return self._transact({"ShowUsername": {}})["username"]
 
     def resolve_profile(self, owner: str) -> Optional[Profile]:
-        profile = self._transact({"ResolveProfile": {"owner": owner}})
+        profile = self._transact({"ResolveProfile": {"owner": owner}})["profile"]
         return None if profile is None else from_shape(Profile, profile)
 
     # ------------------------------------------------------------------
@@ -301,12 +293,11 @@ class Client:
         return from_shape(Device, dev)
 
     def device_list(self) -> list[DeviceInfo]:
-        devices = self._transact({"DeviceList": {}})
+        devices = self._transact({"DeviceList": {}})["devices"]
         return [from_shape(DeviceInfo, d) for d in devices]
 
     def resolve_owner_device(self, owner: str) -> Optional[str]:
-        (peer_id,) = self._transact({"ResolveOwnerDevice": {"owner": owner}})
-        return peer_id
+        return self._transact({"ResolveOwnerDevice": {"owner": owner}})["peer_id"]
 
     def add_device(self, device_id: str, device_name: str) -> None:
         return self._transact({"AddDevice": {"device_id": device_id, "device_name": device_name}})
@@ -315,14 +306,13 @@ class Client:
         return self._transact({"RemoveDevice": {"device_id": device_id}})
 
     def initiate_pairing(self) -> Any:
-        return self._transact({"InitiatePairing": {}})
+        return self._transact({"InitiatePairing": {}})["qr"]
 
     def complete_pairing(self, qr: Any, code: str) -> str:
-        (message,) = self._transact({"CompletePairing": {"qr": to_shape(qr), "code": code}})
-        return message
+        return self._transact({"CompletePairing": {"qr": to_shape(qr), "code": code}})["message"]
 
     def sync_from_peer(self, peer_id: str) -> SyncResult:
-        result = self._transact({"SyncFromPeer": {"peer_id": peer_id}})
+        result = self._transact({"SyncFromPeer": {"peer_id": peer_id}})["result"]
         return from_shape(SyncResult, result)
 
     def sync_device_list(self) -> None:
@@ -342,27 +332,25 @@ class Client:
         return self._transact({"Publish": {"topic": topic, "data": list(data)}})
 
     def peers(self) -> list[PeerInfo]:
-        peers = self._transact({"Peers": {}})
+        peers = self._transact({"Peers": {}})["peers"]
         return [from_shape(PeerInfo, p) for p in peers]
 
     def relay_reservations(self) -> list[RelayReservationInfo]:
-        reservations = self._transact({"RelayReservations": {}})
+        reservations = self._transact({"RelayReservations": {}})["reservations"]
         return [from_shape(RelayReservationInfo, r) for r in reservations]
 
     def find_providers(self, id_: ObjectId) -> list[str]:
-        (peer_ids,) = self._transact({"FindProviders": {"id": id_}})
-        return peer_ids
+        return self._transact({"FindProviders": {"id": id_}})["peer_ids"]
 
     def fetch_object(self, peer_id: str, id_: ObjectId) -> StoredObject:
-        obj = self._transact({"FetchObject": {"peer_id": peer_id, "id": id_}})
-        return from_shape(StoredObject, obj)
+        obj = self._transact({"FetchObject": {"peer_id": peer_id, "id": id_}})["bundle"]
+        return from_shape(ExportBundle, obj).object
 
     def announce(self, id_: ObjectId) -> None:
         return self._transact({"Announce": {"id": id_}})
 
     def put_object_public(self, data: bytes, object_type: str, name: Optional[str] = None) -> ObjectId:
-        (id_,) = self._transact({"PutObjectPublic": {"data": list(data), "object_type": object_type, "name": name}})
-        return id_
+        return self._transact({"PutObjectPublic": {"data": list(data), "object_type": object_type, "name": name}})["id"]
 
     def share_object(self, name: str, object_: ObjectId, app: Optional[str], recipients: list[bytes]) -> None:
         return self._transact(
@@ -382,19 +370,19 @@ class Client:
     ) -> Capability:
         cap = self._transact(
             {"GrantCapability": {"subject": subject, "resource": resource, "permissions": permissions, "expires_at": expires_at}}
-        )
+        )["capability"]
         return from_shape(Capability, cap)
 
     def list_capabilities(self) -> Optional[CapabilityIndex]:
-        index = self._transact({"ListCapabilities": {}})
+        index = self._transact({"ListCapabilities": {}})["index"]
         return None if index is None else from_shape(CapabilityIndex, index)
 
     def revoke_capability(self, id_: CapabilityId) -> None:
         return self._transact({"RevokeCapability": {"id": id_}})
 
     def check_capability(self, capability: Capability) -> tuple[bool, str]:
-        (valid, reason) = self._transact({"CheckCapability": {"capability": to_shape(capability)}})
-        return valid, reason
+        payload = self._transact({"CheckCapability": {"capability": to_shape(capability)}})
+        return payload["valid"], payload["reason"]
 
     def check_access(
         self,
@@ -402,18 +390,17 @@ class Client:
         permission: str,
         resource: Any,
     ) -> bool:
-        (allowed,) = self._transact(
+        return self._transact(
             {"CheckAccess": {"subject": subject, "permission": permission, "resource": resource}}
-        )
-        return allowed
+        )["allowed"]
 
     # ------------------------------------------------------------------
     # Serve sessions
     # ------------------------------------------------------------------
 
     def start_serve_session(self, edge_addr: str, app_id: str) -> tuple[str, str]:
-        (sid, root_url) = self._transact({"StartServeSession": {"edge_addr": edge_addr, "app_id": app_id}})
-        return sid, root_url
+        payload = self._transact({"StartServeSession": {"edge_addr": edge_addr, "app_id": app_id}})
+        return payload["app_id"], payload["root_url"]
 
     def stop_serve_session(self) -> None:
         return self._transact({"StopServeSession": {}})
